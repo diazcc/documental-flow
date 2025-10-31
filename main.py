@@ -3,7 +3,7 @@ import json
 from flask import Flask, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
-
+from flask_cors import CORS
 app = Flask(__name__)
 
 # 🔽 Configura CORS para tu aplicación.
