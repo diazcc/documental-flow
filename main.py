@@ -6,6 +6,11 @@ from firebase_admin import credentials, firestore
 
 app = Flask(__name__)
 
+# 🔽 Configura CORS para tu aplicación.
+#    Esto le dará permiso a http://localhost:5173 para acceder a tu API.
+#    Cuando despliegues a Firebase, deberás añadir esa URL también.
+CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "https://tu-proyecto.web.app"]}})
+
 # Leer variable de entorno FIREBASE_SERVICE_ACCOUNT
 firebase_config = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 
