@@ -1,120 +1,120 @@
 import os
 import json
-import jwt
-import datetime
 from flask import Flask, jsonify, request
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, auth
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+
+# ✅ CORS configurado para tu frontend local y desplegado
 CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}})
 
-# 🔐 Clave secreta para JWT (puedes ponerla como variable de entorno también)
-app.config["SECRET_KEY"] = os.getenv("JWT_SECRET", "super_secret_key")
-
-# 🔥 Configurar Firebase
+# ✅ Inicializar Firebase
 firebase_config = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+
 if not firebase_config:
     raise ValueError("FIREBASE_SERVICE_ACCOUNT no está configurada en las variables de entorno.")
 
 cred = credentials.Certificate(json.loads(firebase_config))
 firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
-# ✅ Ruta de prueba
+# ✅ Endpoint principal
 @app.route("/")
 def home():
     return jsonify({"message": "Servidor funcionando correctamente 🚀"})
 
-# 👤 Crear usuario
-@app.route("/register", methods=["POST"])
-def register_user():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-    name = data.get("name")
+# ✅ Obtener todos los usuarios (solo lectura)
+@app.route("/users", methods=["GET"])
+def get_users():
+    users_ref = db.collection("users")
+    docs = users_ref.stream()
+    users = [doc.to_dict() for doc in docs]
+    return jsonify(users)
 
-    if not email or not password or not name:
-        return jsonify({"error": "Todos los campos son obligatorios"}), 400
+# ✅ Crear usuario (registro)
+@app.route("/signup", methods=["POST"])
+def signup():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+        name = data.get("name")
 
-    # Verificar si ya existe
-    users_ref = db.collection("users").where("email", "==", email).stream()
-    if any(users_ref):
-        return jsonify({"error": "El usuario ya existe"}), 409
+        if not email or not password:
+            return jsonify({"error": "Email y password son requeridos"}), 400
 
-    hashed_password = generate_password_hash(password)
+        # 🔥 Crear usuario en Firebase Authentication
+        user = auth.create_user(
+            email=email,
+            password=password,
+            display_name=name
+        )
 
-    # Crear usuario en Firestore
-    user_data = {
-        "email": email,
-        "name": name,
-        "password": hashed_password,
-        "created_at": datetime.datetime.utcnow(),
-    }
-    db.collection("users").add(user_data)
+        # 🔥 Guardar datos adicionales en Firestore
+        db.collection("users").document(user.uid).set({
+            "uid": user.uid,
+            "name": name,
+            "email": email,
+            "created_at": firestore.SERVER_TIMESTAMP
+        })
 
-    return jsonify({"message": "Usuario creado exitosamente"}), 201
+        return jsonify({"message": "Usuario creado correctamente", "uid": user.uid}), 201
 
-# 🔑 Iniciar sesión
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# ✅ Iniciar sesión (login)
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
 
-    users_ref = db.collection("users").where("email", "==", email).stream()
-    user_doc = next(users_ref, None)
+        if not email or not password:
+            return jsonify({"error": "Email y password son requeridos"}), 400
 
-    if not user_doc:
-        return jsonify({"error": "Usuario no encontrado"}), 404
+        # ⚠️ Firebase Admin SDK no permite autenticar con contraseña directamente
+        # Esto se debe hacer desde el frontend usando Firebase JS SDK
+        return jsonify({
+            "message": "El login debe realizarse desde el frontend con Firebase Auth. Luego envía el ID token al backend."
+        }), 400
 
-    user_data = user_doc.to_dict()
-    if not check_password_hash(user_data["password"], password):
-        return jsonify({"error": "Contraseña incorrecta"}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
-    # Generar token JWT (expira en 1 hora)
-    token = jwt.encode(
-        {
-            "email": email,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)
-        },
-        app.config["SECRET_KEY"],
-        algorithm="HS256"
-    )
 
-    return jsonify({"token": token, "user": {"name": user_data["name"], "email": email}}), 200
+# ✅ Verificar token enviado por el frontend
+@app.route("/verify_token", methods=["POST"])
+def verify_token():
+    try:
+        data = request.get_json()
+        id_token = data.get("id_token")
 
-# 🚪 Cerrar sesión (simple)
+        if not id_token:
+            return jsonify({"error": "Falta id_token"}), 400
+
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token["uid"]
+        return jsonify({"message": "Token válido", "uid": uid}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 401
+
+
+# ✅ Cerrar sesión (logout)
 @app.route("/logout", methods=["POST"])
 def logout():
-    # En este ejemplo no hay sesión persistente, pero podrías invalidar tokens si los guardas en Firestore
-    return jsonify({"message": "Sesión cerrada correctamente"}), 200
+    # En Firebase, el cierre de sesión se hace en el frontend eliminando el token local.
+    # Aquí puedes invalidar tokens si quieres forzar cierre desde el backend.
+    return jsonify({"message": "Sesión cerrada correctamente (client-side)"}), 200
 
-# 🧩 Proteger rutas (ejemplo)
-@app.route("/profile", methods=["GET"])
-def profile():
-    token = request.headers.get("Authorization")
-    if not token:
-        return jsonify({"error": "Token requerido"}), 401
 
-    try:
-        decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        email = decoded["email"]
-    except jwt.ExpiredSignatureError:
-        return jsonify({"error": "Token expirado"}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({"error": "Token inválido"}), 401
-
-    # Buscar el usuario
-    users_ref = db.collection("users").where("email", "==", email).stream()
-    user_doc = next(users_ref, None)
-    if not user_doc:
-        return jsonify({"error": "Usuario no encontrado"}), 404
-
-    return jsonify({"profile": user_doc.to_dict()}), 200
-
+# ✅ Ejecutar servidor
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
