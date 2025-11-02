@@ -3,3 +3,4 @@ firebase-admin==6.5.0
 gunicorn==22.0.0
 uvicorn
 Flask-Cors
+werkzeug
