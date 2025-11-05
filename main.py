@@ -55,7 +55,44 @@ def check_connection():
             "error": str(e)
         }), 500
 
+@app.route("/files", methods=["GET"])
+def get_files():
+    try:
+        searched_value = request.args.get("searched_value", "").lower()
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
 
+        files_ref = db.collection("files").order_by("created_at", direction=firestore.Query.DESCENDING)
+        docs = files_ref.stream()
+
+        # Convertir a lista
+        all_files = [doc.to_dict() for doc in docs]
+
+        # Filtrar por búsqueda
+        if searched_value:
+            all_files = [
+                f for f in all_files
+                if searched_value in f.get("document_name", "").lower()
+            ]
+
+        # Paginación
+        total_files = len(all_files)
+        total_pages = (total_files + page_size - 1) // page_size
+        start = (page - 1) * page_size
+        end = start + page_size
+
+        paginated_files = all_files[start:end]
+
+        return jsonify({
+            "response": {
+                "results": paginated_files,
+                "total_pages": total_pages
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+        
 @app.route("/upload-pdf", methods=["POST"])
 def upload_pdf():
     try:
