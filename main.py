@@ -7,6 +7,12 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
+cloudinary.config(
+    cloud_name="tu_cloud_name",
+    api_key="tu_api_key",
+    api_secret="tu_api_secret"
+)
+
 # ✅ CORS configurado para tu frontend local y desplegado
 CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}})
 
@@ -25,7 +31,26 @@ db = firestore.client()
 @app.route("/")
 def home():
     return jsonify({"message": "Servidor funcionando correctamente 🚀"})
+    
+@app.route("/upload-pdf", methods=["POST"])
+def upload_pdf():
+    try:
+        # El archivo llega desde el Front (form-data)
+        file = request.files["file"]
 
+        # Subir a Cloudinary (como archivo RAW, no imagen)
+        upload_result = cloudinary.uploader.upload(
+            file,
+            resource_type="raw"  # 👈 necesario para PDF
+        )
+
+        return jsonify({
+            "message": "Archivo subido correctamente",
+            "url": upload_result["secure_url"]
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 # ✅ Obtener todos los usuarios (solo lectura)
 @app.route("/users", methods=["GET"])
 def get_users():
