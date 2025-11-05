@@ -10,9 +10,9 @@ import cloudinary.uploader
 app = Flask(__name__)
 
 cloudinary.config(
-    cloud_name="tu_cloud_name",
-    api_key="tu_api_key",
-    api_secret="tu_api_secret"
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
 # ✅ CORS configurado para tu frontend local y desplegado
