@@ -14,7 +14,18 @@ cloudinary.config(
 )
 
 # ✅ CORS configurado para tu frontend local y desplegado
-CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}})
+CORS(app, supports_credentials=True, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://portfolio-d0ea2.web.app",
+            "https://documental-flow.onrender.com"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # ✅ Inicializar Firebase
 firebase_config = os.getenv("FIREBASE_SERVICE_ACCOUNT")
@@ -31,7 +42,7 @@ db = firestore.client()
 @app.route("/")
 def home():
     return jsonify({"message": "Servidor funcionando correctamente 🚀"})
-    
+
 @app.route("/upload-pdf", methods=["POST"])
 def upload_pdf():
     try:
