@@ -92,24 +92,25 @@ def get_files():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-        
+
 @app.route("/upload-pdf", methods=["POST"])
 def upload_pdf():
     try:
         file = request.files["file"]
 
-        # Subir a Cloudinary
         upload_result = cloudinary.uploader.upload(
             file,
             resource_type="raw"
         )
 
-        # Guardar metadatos en Firestore
         file_data = {
             "document_name": file.filename,
             "url": upload_result["secure_url"],
             "created_at": firestore.SERVER_TIMESTAMP
         }
+
+        # 🧪 Debug
+        print("Guardando en Firestore:", file_data)
 
         db.collection("files").add(file_data)
 
@@ -119,6 +120,7 @@ def upload_pdf():
         }), 200
 
     except Exception as e:
+        print("🔥 Error en upload_pdf:", e)
         return jsonify({"error": str(e)}), 400
 # ✅ Obtener todos los usuarios (solo lectura)
 @app.route("/users", methods=["GET"])
