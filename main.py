@@ -17,9 +17,10 @@ cloudinary.config(
 
 # ✅ CORS configurado para tu frontend local y desplegado
 CORS(app,
-     supports_credentials=True,
      resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}},
-     expose_headers=["Content-Type", "Authorization"]
+     supports_credentials=True,
+     methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"]
 )
 
 # ✅ Inicializar Firebase
@@ -38,6 +39,22 @@ db = firestore.client()
 def home():
     return jsonify({"message": "Servidor funcionando correctamente 🚀"})
 
+@app.route("/check-connection", methods=["GET"])
+def check_connection():
+    try:
+        # Prueba simple: leer una colección o simplemente verificar que Firestore responde
+        db.collection("test_connection").document("ping").set({"ok": True})
+        return jsonify({
+            "status": "ok",
+            "message": "Conexión con backend y Firestore exitosa 🚀"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error al conectar con Firestore",
+            "error": str(e)
+        }), 500
+        
 @app.route("/upload-pdf", methods=["POST"])
 def upload_pdf():
     try:
