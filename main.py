@@ -89,7 +89,7 @@ def login():
 
 
 # ✅ Verificar token enviado por el frontend
-@app.route("/verify_token", methods=["POST"])
+@app.route("/verify_token", methods=["POST"]) 
 def verify_token():
     try:
         data = request.get_json()
