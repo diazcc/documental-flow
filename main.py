@@ -55,6 +55,7 @@ def check_connection():
             "error": str(e)
         }), 500
 
+
 @app.route("/upload-pdf", methods=["POST"])
 def upload_pdf():
     try:
@@ -74,26 +75,6 @@ def upload_pdf():
         }
 
         db.collection("files").add(file_data)
-
-        return jsonify({
-            "message": "Archivo subido correctamente",
-            "url": upload_result["secure_url"]
-        }), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-        
-@app.route("/upload-pdf", methods=["POST"])
-def upload_pdf():
-    try:
-        # El archivo llega desde el Front (form-data)
-        file = request.files["file"]
-
-        # Subir a Cloudinary (como archivo RAW, no imagen)
-        upload_result = cloudinary.uploader.upload(
-            file,
-            resource_type="raw"  # 👈 necesario para PDF
-        )
 
         return jsonify({
             "message": "Archivo subido correctamente",
