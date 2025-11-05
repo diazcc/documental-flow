@@ -16,18 +16,11 @@ cloudinary.config(
 )
 
 # ✅ CORS configurado para tu frontend local y desplegado
-CORS(app, supports_credentials=True, resources={
-    r"/*": {
-        "origins": [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://portfolio-d0ea2.web.app",
-            "https://documental-flow.onrender.com"
-        ],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+CORS(app,
+     supports_credentials=True,
+     resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}},
+     expose_headers=["Content-Type", "Authorization"]
+)
 
 # ✅ Inicializar Firebase
 firebase_config = os.getenv("FIREBASE_SERVICE_ACCOUNT")
