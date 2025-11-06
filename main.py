@@ -234,8 +234,11 @@ def create_request():
 @app.route("/requests", methods=["GET", "OPTIONS"])
 def get_requests():
     if request.method == "OPTIONS":
-        # 🔓 Permitir preflight
-        return '', 204
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        return response, 200
 
     try:
         # 🔐 Verificar token del usuario
