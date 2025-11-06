@@ -38,6 +38,61 @@ db = firestore.client()
 @app.route("/")
 def home():
     return jsonify({"message": "Servidor funcionando correctamente 🚀"})
+    
+# ✅ Obtener remitentes (remitters) del usuario autenticado
+@app.route("/remitters", methods=["GET"])
+def get_remitters():
+    try:
+        # 🧠 1️⃣ Obtener parámetros de búsqueda y paginación
+        searched_value = request.args.get("searched_value", "").lower()
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
+
+        # 🧠 2️⃣ Obtener ID del usuario autenticado (puedes pasarlo por header Authorization o query)
+        id_token = request.headers.get("Authorization")
+
+        if not id_token:
+            return jsonify({"error": "Falta token de autenticación"}), 401
+
+        # 🔍 Verificar token y obtener UID
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token["uid"]
+
+        # 🧠 3️⃣ Buscar al usuario en Firestore
+        user_doc = db.collection("users").document(uid).get()
+
+        if not user_doc.exists:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+
+        user_data = user_doc.to_dict()
+        remitters = user_data.get("remitters", [])
+
+        # 🧠 4️⃣ Filtrar por búsqueda
+        if searched_value:
+            remitters = [
+                r for r in remitters
+                if searched_value in r.get("name", "").lower() or searched_value in r.get("email", "").lower()
+            ]
+
+        # 🧠 5️⃣ Paginación
+        total = len(remitters)
+        total_pages = (total + page_size - 1) // page_size
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_remitters = remitters[start:end]
+
+        # 🧠 6️⃣ Responder
+        return jsonify({
+            "response": {
+                "results": paginated_remitters,
+                "total_pages": total_pages,
+                "total_results": total
+            }
+        }), 200
+
+    except Exception as e:
+        print("🔥 Error en /remitters:", e)
+        return jsonify({"error": str(e)}), 400
 
 @app.route("/check-connection", methods=["GET"])
 def check_connection():
