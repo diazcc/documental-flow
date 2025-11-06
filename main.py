@@ -230,8 +230,13 @@ def create_request():
 # ✅ Permitir preflight para /request (CORS)
 
 
-@app.route("/request", methods=["GET"])
+# ✅ Endpoint para listar requests visibles al usuario logueado
+@app.route("/requests", methods=["GET", "OPTIONS"])
 def get_requests():
+    if request.method == "OPTIONS":
+        # 🔓 Permitir preflight
+        return '', 204
+
     try:
         # 🔐 Verificar token del usuario
         id_token = request.headers.get("Authorization")
@@ -239,53 +244,46 @@ def get_requests():
             return jsonify({"error": "Falta token"}), 401
 
         decoded_token = auth.verify_id_token(id_token)
-        uid = decoded_token["uid"]
+        email_logged = decoded_token.get("email")
 
-        # 🧠 Parámetros de búsqueda y paginación
+        # 🔍 Parámetros de búsqueda y paginación
         searched_value = request.args.get("searched_value", "").lower()
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        # 🔍 Consultar Firestore
-        requests_ref = db.collection("request")
-        requests_docs = requests_ref.stream()
+        # 🔎 Traer requests donde el usuario sea creador o asignado
+        collection_ref = db.collection("request")
+        query_creator = collection_ref.where("creator_user", "==", email_logged).get()
+        query_assigned = collection_ref.where("user_asigned", "==", email_logged).get()
 
-        all_requests = []
-        for doc in requests_docs:
-            data = doc.to_dict()
-            # 🧩 Mostrar solo los creados o asignados al usuario logeado
-            if data.get("creator_user") == uid or data.get("user_asigned") == uid:
-                all_requests.append({**data, "id": doc.id})
+        all_requests = [doc.to_dict() for doc in query_creator] + [doc.to_dict() for doc in query_assigned]
 
-        # 🔎 Filtrar por búsqueda
+        # 🧠 Filtrar por búsqueda (subject o correo)
         if searched_value:
             all_requests = [
                 r for r in all_requests
                 if searched_value in r.get("subject", "").lower()
-                or any(searched_value in d.get("name", "").lower() for d in r.get("documents", []))
+                or searched_value in r.get("creator_user", "").lower()
+                or searched_value in r.get("user_asigned", "").lower()
             ]
 
-        # 📄 Ordenar por fecha (más reciente primero)
-        all_requests.sort(key=lambda x: x.get("date_created", ""), reverse=True)
-
-        # 🧮 Paginación
-        total_results = len(all_requests)
-        total_pages = (total_results + page_size - 1) // page_size
+        # 🗂️ Paginación
+        total = len(all_requests)
+        total_pages = (total + page_size - 1) // page_size
         start = (page - 1) * page_size
         end = start + page_size
         paginated = all_requests[start:end]
 
-        # 🧾 Respuesta final
         return jsonify({
             "response": {
                 "results": paginated,
-                "total_pages": total_pages,
-                "total_results": total_results
+                "total_results": total,
+                "total_pages": total_pages
             }
         }), 200
 
     except Exception as e:
-        print("🔥 Error en /request (GET):", e)
+        print("🔥 Error en /requests:", e)
         return jsonify({"error": str(e)}), 400
 
 
