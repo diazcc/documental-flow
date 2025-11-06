@@ -8,6 +8,7 @@ import cloudinary
 import cloudinary.uploader  
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
