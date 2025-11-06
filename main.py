@@ -19,8 +19,9 @@ cloudinary.config(
 CORS(app,
      resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}},
      supports_credentials=True,
-     methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"]
+     expose_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin"]
 )
 
 # ✅ Inicializar Firebase
@@ -94,7 +95,7 @@ def get_remitters():
         print("🔥 Error en /remitters:", e)
         return jsonify({"error": str(e)}), 400
 
-@app.route("/remitters", methods=["POST"])
+@app.route("/remitters", methods=["OPTIONS"])
 def add_remitter():
     try:
         # 🔐 Verificar token del usuario
