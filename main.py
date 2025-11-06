@@ -211,8 +211,70 @@ def create_request():
 @app.route("/request", methods=["OPTIONS"])
 def request_options():
     return '', 204
-    
 
+@app.route("/request", methods=["GET"])
+def get_requests():
+    try:
+        # 🔐 Verificar token del usuario
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
+
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token["uid"]
+
+        # 🧠 Parámetros de búsqueda y paginación
+        searched_value = request.args.get("searched_value", "").lower()
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
+
+        # 🔍 Consultar Firestore
+        requests_ref = db.collection("request")
+        requests_docs = requests_ref.stream()
+
+        all_requests = []
+        for doc in requests_docs:
+            data = doc.to_dict()
+            # 🧩 Mostrar solo los creados o asignados al usuario logeado
+            if data.get("creator_user") == uid or data.get("user_asigned") == uid:
+                all_requests.append({**data, "id": doc.id})
+
+        # 🔎 Filtrar por búsqueda
+        if searched_value:
+            all_requests = [
+                r for r in all_requests
+                if searched_value in r.get("subject", "").lower()
+                or any(searched_value in d.get("name", "").lower() for d in r.get("documents", []))
+            ]
+
+        # 📄 Ordenar por fecha (más reciente primero)
+        all_requests.sort(key=lambda x: x.get("date_created", ""), reverse=True)
+
+        # 🧮 Paginación
+        total_results = len(all_requests)
+        total_pages = (total_results + page_size - 1) // page_size
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated = all_requests[start:end]
+
+        # 🧾 Respuesta final
+        return jsonify({
+            "response": {
+                "results": paginated,
+                "total_pages": total_pages,
+                "total_results": total_results
+            }
+        }), 200
+
+    except Exception as e:
+        print("🔥 Error en /request (GET):", e)
+        return jsonify({"error": str(e)}), 400
+
+
+# ✅ Permitir preflight para /request (CORS)
+@app.route("/request", methods=["OPTIONS"])
+def request_options():
+    return '', 204
 @app.route("/check-connection", methods=["GET"])
 def check_connection():
     try:
