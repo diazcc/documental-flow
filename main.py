@@ -208,9 +208,7 @@ def create_request():
 
 
 # ✅ Permitir preflight para /request (CORS)
-@app.route("/request", methods=["OPTIONS"])
-def request_options():
-    return '', 204
+
 
 @app.route("/request", methods=["GET"])
 def get_requests():
