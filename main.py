@@ -62,7 +62,7 @@ def get_files():
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        files_ref = db.collection("files").order_by("created_at", direction=firestore.Query.DESCENDING)
+        files_ref = db.collection("documents").order_by("created_at", direction=firestore.Query.DESCENDING)
         docs = files_ref.stream()
 
         # Convertir a lista
