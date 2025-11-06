@@ -161,18 +161,21 @@ def create_request():
 
         decoded_token = auth.verify_id_token(id_token)
         uid = decoded_token["uid"]
+        email_logged = decoded_token.get("email")
 
         # 🧾 Leer los campos del formulario
         subject = request.form.get("subject")
         user_asigned = request.form.get("user_asigned")
 
         if not subject or not user_asigned:
-            return jsonify({"error": "Faltan campos obligatorios (subject, user_asigned)"}), 400
+            return jsonify({
+                "error": "Faltan campos obligatorios (subject, user_asigned)"
+            }), 400
 
         # 🗂️ Subir documentos (pueden ser múltiples)
         uploaded_files = request.files.getlist("document")
-
         documents = []
+
         for file in uploaded_files:
             upload_result = cloudinary.uploader.upload(
                 file,
@@ -182,13 +185,28 @@ def create_request():
                 "name": file.filename,
                 "url": upload_result.get("secure_url"),
                 "observation": "",
-                "status": "",
+                "status": "uploaded",
                 "subject": subject
             })
 
-        # 🕒 Crear registro en Firestore
+        # 🧠 Verificar si el remitente ya existe (por correo)
+        remitter_query = db.collection("users").where("email", "==", user_asigned).get()
+
+        if not remitter_query:
+            # Crear remitente básico (usuario no registrado aún)
+            new_remitter = {
+                "email": user_asigned,
+                "role": "external",
+                "status": "pending",
+                "date_created": firestore.SERVER_TIMESTAMP,
+                "remitters": []
+            }
+            db.collection("users").add(new_remitter)
+
+        # 🕒 Crear el request
         doc_data = {
-            "creator_user": uid,
+            "creator_user": email_logged,  # mejor guardar correo que uid para búsquedas
+            "creator_uid": uid,
             "date_created": firestore.SERVER_TIMESTAMP,
             "user_asigned": user_asigned,
             "subject": subject,
