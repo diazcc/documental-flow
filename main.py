@@ -16,8 +16,12 @@ cloudinary.config(
 )
 
 # ✅ CORS configurado para tu frontend local y desplegado
-CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app", "https://documental-flow.onrender.com"]}}, supports_credentials=True)
-
+CORS(app,
+     resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}},
+     supports_credentials=True,
+     methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"]
+)
 
 # ✅ Inicializar Firebase
 firebase_config = os.getenv("FIREBASE_SERVICE_ACCOUNT")
@@ -58,7 +62,7 @@ def get_files():
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        files_ref = db.collection("documents").order_by("created_at", direction=firestore.Query.DESCENDING)
+        files_ref = db.collection("files").order_by("created_at", direction=firestore.Query.DESCENDING)
         docs = files_ref.stream()
 
         # Convertir a lista
