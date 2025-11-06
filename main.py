@@ -150,6 +150,69 @@ def add_remitter():
 def remitters_options():
     return '', 204
 
+    # ✅ Crear nueva solicitud (request)
+@app.route("/request", methods=["POST"])
+def create_request():
+    try:
+        # 🔒 Verificar token de autenticación (enviado en headers)
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token de autenticación"}), 401
+
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token["uid"]
+
+        # 🧾 Leer los campos del formulario
+        subject = request.form.get("subject")
+        user_asigned = request.form.get("user_asigned")
+
+        if not subject or not user_asigned:
+            return jsonify({"error": "Faltan campos obligatorios (subject, user_asigned)"}), 400
+
+        # 🗂️ Subir documentos (pueden ser múltiples)
+        uploaded_files = request.files.getlist("document")
+
+        documents = []
+        for file in uploaded_files:
+            upload_result = cloudinary.uploader.upload(
+                file,
+                resource_type="auto"
+            )
+            documents.append({
+                "name": file.filename,
+                "url": upload_result.get("secure_url"),
+                "observation": "",
+                "status": "",
+                "subject": subject
+            })
+
+        # 🕒 Crear registro en Firestore
+        doc_data = {
+            "creator_user": uid,
+            "date_created": firestore.SERVER_TIMESTAMP,
+            "user_asigned": user_asigned,
+            "subject": subject,
+            "documents": documents
+        }
+
+        db.collection("request").add(doc_data)
+
+        return jsonify({
+            "message": "Solicitud creada correctamente",
+            "data": doc_data
+        }), 201
+
+    except Exception as e:
+        print("🔥 Error en /request:", e)
+        return jsonify({"error": str(e)}), 400
+
+
+# ✅ Permitir preflight para /request (CORS)
+@app.route("/request", methods=["OPTIONS"])
+def request_options():
+    return '', 204
+    
+
 @app.route("/check-connection", methods=["GET"])
 def check_connection():
     try:
