@@ -38,7 +38,7 @@ db = firestore.client()
 @app.route("/")
 def home():
     return jsonify({"message": "Servidor funcionando correctamente 🚀"})
-    
+
 # ✅ Obtener remitentes (remitters) del usuario autenticado
 @app.route("/remitters", methods=["GET"])
 def get_remitters():
@@ -92,6 +92,55 @@ def get_remitters():
 
     except Exception as e:
         print("🔥 Error en /remitters:", e)
+        return jsonify({"error": str(e)}), 400
+        
+@app.route("/remitters", methods=["POST"])
+def add_remitter():
+    try:
+        # 🔐 Verificar token del usuario
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
+
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token["uid"]
+
+        # 📥 Datos del remitente nuevo
+        data = request.get_json()
+        name = data.get("name")
+        email = data.get("email")
+
+        if not name or not email:
+            return jsonify({"error": "Faltan campos obligatorios (name, email)"}), 400
+
+        # 📄 Buscar usuario en Firestore
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+
+        if not user_doc.exists:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+
+        user_data = user_doc.to_dict()
+        remitters = user_data.get("remitters", [])
+
+        # 🚫 Validar si ya existe el remitente (por email)
+        if any(r.get("email") == email for r in remitters):
+            return jsonify({"error": "El remitente ya existe"}), 400
+
+        # ✅ Agregar nuevo remitente
+        new_remitter = {"name": name, "email": email}
+        remitters.append(new_remitter)
+
+        # 💾 Guardar de nuevo
+        user_ref.update({"remitters": remitters})
+
+        return jsonify({
+            "message": "Remitente agregado correctamente",
+            "remitter": new_remitter
+        }), 201
+
+    except Exception as e:
+        print("🔥 Error en /remitters (POST):", e)
         return jsonify({"error": str(e)}), 400
 
 @app.route("/check-connection", methods=["GET"])
