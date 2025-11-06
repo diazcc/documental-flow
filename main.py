@@ -95,7 +95,7 @@ def get_remitters():
         print("🔥 Error en /remitters:", e)
         return jsonify({"error": str(e)}), 400
 
-@app.route("/remitters", methods=["OPTIONS"])
+@app.route("/remitters", methods=["POST"])
 def add_remitter():
     try:
         # 🔐 Verificar token del usuario
