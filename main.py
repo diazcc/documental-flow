@@ -215,9 +215,11 @@ def create_request():
 
         db.collection("request").add(doc_data)
 
+        doc_data_response = {k: v for k, v in doc_data.items() if k != "date_created"}
+
         return jsonify({
             "message": "Solicitud creada correctamente",
-            "data": doc_data
+            "data": doc_data_response
         }), 201
 
     except Exception as e:
