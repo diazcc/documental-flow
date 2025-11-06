@@ -112,7 +112,7 @@ def upload_pdf():
         # 🧪 Debug
         print("Guardando en Firestore:", file_data)
 
-        db.collection("files").add(file_data)
+        db.collection("documents").add(file_data)
 
         return jsonify({
             "message": "Archivo subido correctamente",
