@@ -285,6 +285,111 @@ def get_requests():
     except Exception as e:
         print("🔥 Error en /requests:", e)
         return jsonify({"error": str(e)}), 400
+@app.route("/requests-sent", methods=["GET", "OPTIONS"])
+def get_requests_sent():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        return response, 200
+
+    try:
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
+
+        decoded_token = auth.verify_id_token(id_token)
+        email_logged = decoded_token.get("email")
+
+        searched_value = request.args.get("searched_value", "").lower()
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
+
+        # ✅ Solo solicitudes creadas por el usuario
+        query_creator = db.collection("request").where("creator_user", "==", email_logged).get()
+        requests_sent = [{"id": doc.id, **doc.to_dict()} for doc in query_creator]
+
+        # 🔍 Búsqueda
+        if searched_value:
+            requests_sent = [
+                r for r in requests_sent
+                if searched_value in r.get("subject", "").lower() or
+                   searched_value in r.get("user_asigned", "").lower()
+            ]
+
+        # 📄 Paginación
+        total = len(requests_sent)
+        total_pages = (total + page_size - 1) // page_size
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated = requests_sent[start:end]
+        paginated_clean = [clean_firestore_data(r) for r in paginated]
+
+        return jsonify({
+            "response": {
+                "results": paginated_clean,
+                "total_results": total,
+                "total_pages": total_pages
+            }
+        }), 200
+
+    except Exception as e:
+        print("🔥 Error en /requests-sent:", e)
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/requests-received", methods=["GET", "OPTIONS"])
+def get_requests_received():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        return response, 200
+
+    try:
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
+
+        decoded_token = auth.verify_id_token(id_token)
+        email_logged = decoded_token.get("email")
+
+        searched_value = request.args.get("searched_value", "").lower()
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
+
+        # ✅ Solo solicitudes recibidas (asignadas al usuario)
+        query_assigned = db.collection("request").where("user_asigned", "==", email_logged).get()
+        requests_received = [{"id": doc.id, **doc.to_dict()} for doc in query_assigned]
+
+        # 🔍 Búsqueda
+        if searched_value:
+            requests_received = [
+                r for r in requests_received
+                if searched_value in r.get("subject", "").lower() or
+                   searched_value in r.get("creator_user", "").lower()
+            ]
+
+        # 📄 Paginación
+        total = len(requests_received)
+        total_pages = (total + page_size - 1) // page_size
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated = requests_received[start:end]
+        paginated_clean = [clean_firestore_data(r) for r in paginated]
+
+        return jsonify({
+            "response": {
+                "results": paginated_clean,
+                "total_results": total,
+                "total_pages": total_pages
+            }
+        }), 200
+
+    except Exception as e:
+        print("🔥 Error en /requests-received:", e)
+        return jsonify({"error": str(e)}), 400
 
 
 # ✅ Comprobar conexión
