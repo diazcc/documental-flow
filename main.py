@@ -181,7 +181,7 @@ def get_request_detail(request_id):
         doc = doc_ref.get()
 
         if not doc.exists:
-        return jsonify({"error": "El request no existe"}), 404
+            return jsonify({"error": "El request no existe"}), 404
 
         data = doc.to_dict()
         data["id"] = doc.id
