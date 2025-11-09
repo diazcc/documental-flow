@@ -229,10 +229,13 @@ def create_request():
                 "subject": subject
             })
 
-        remitter_query = db.collection("users").where("email", "==", user_asigned).get()
+        # ✅ Verificar si el usuario asignado existe
+        remitter_query = db.collection("users").where("email", "==", user_asigned.lower()).get()
+
         if not remitter_query:
+            # Si no existe, se crea uno nuevo
             new_remitter = {
-                "email": user_asigned,
+                "email": user_asigned.lower(),
                 "role": "external",
                 "status": "pending",
                 "date_created": firestore.SERVER_TIMESTAMP,
@@ -240,15 +243,16 @@ def create_request():
             }
             db.collection("users").add(new_remitter)
 
-            doc_data = {
-                        "creator_user": email_logged.lower(),
-                        "creator_uid": uid,
-                        "date_created": firestore.SERVER_TIMESTAMP,
-                        "user_asigned": user_asigned.lower(),
-                        "subject": subject,
-                        "documents": documents,
-                        "status": "pending"  # ← 🔥 estado inicial agregado
-            }
+        # ✅ Crear el request (esto debe ejecutarse SIEMPRE)
+        doc_data = {
+            "creator_user": email_logged.lower(),
+            "creator_uid": uid,
+            "date_created": firestore.SERVER_TIMESTAMP,
+            "user_asigned": user_asigned.lower(),
+            "subject": subject,
+            "documents": documents,
+            "status": "pending"  # ← 🔥 estado inicial agregado
+        }
 
         db.collection("request").add(doc_data)
 
@@ -258,6 +262,7 @@ def create_request():
             "message": "Solicitud creada correctamente",
             "data": doc_data_response
         }), 201
+
     except Exception as e:
         print("🔥 Error en /request:", e)
         return jsonify({"error": str(e)}), 400
