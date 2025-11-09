@@ -226,7 +226,6 @@ def request_options():
     return '', 204
 
 
-# ✅ Listar solicitudes (requests)
 @app.route("/requests", methods=["GET", "OPTIONS"])
 def get_requests():
     if request.method == "OPTIONS":
@@ -252,8 +251,14 @@ def get_requests():
         query_creator = collection_ref.where("creator_user", "==", email_logged).get()
         query_assigned = collection_ref.where("user_asigned", "==", email_logged).get()
 
-        all_requests = [doc.to_dict() for doc in query_creator] + [doc.to_dict() for doc in query_assigned]
+        # 👇 Aquí incluimos el id del documento
+        all_requests = [
+            {"id": doc.id, **doc.to_dict()} for doc in query_creator
+        ] + [
+            {"id": doc.id, **doc.to_dict()} for doc in query_assigned
+        ]
 
+        # 🔍 Filtrado
         if searched_value:
             all_requests = [
                 r for r in all_requests
@@ -262,6 +267,7 @@ def get_requests():
                    searched_value in r.get("user_asigned", "").lower()
             ]
 
+        # 📄 Paginación
         total = len(all_requests)
         total_pages = (total + page_size - 1) // page_size
         start = (page - 1) * page_size
