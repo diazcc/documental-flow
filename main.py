@@ -220,7 +220,7 @@ def create_request():
         uploaded_files = request.files.getlist("document")
         documents = []
         for file in uploaded_files:
-            upload_result = cloudinary.uploader.upload(file, resource_type="auto")
+            upload_result = cloudinary.uploader.upload(file, resource_type="raw")
             documents.append({
                 "name": file.filename,
                 "url": upload_result.get("secure_url"),
