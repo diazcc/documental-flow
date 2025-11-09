@@ -162,10 +162,7 @@ def add_remitter():
         print("🔥 Error en /remitters (POST):", e)
         return jsonify({"error": str(e)}), 400
 
-# ✅ Permitir preflight (CORS) para /remitters
-@app.route("/remitters", methods=["OPTIONS"])
-def remitters_options():
-    return '', 204
+
 
     # ✅ Crear nueva solicitud (request)
 @app.route("/request", methods=["POST"])
