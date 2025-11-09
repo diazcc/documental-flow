@@ -23,7 +23,7 @@ CORS(
     resources={r"/*": {"origins": ["http://localhost:5173", "https://portfolio-d0ea2.web.app"]}},
     supports_credentials=True,
     expose_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE","PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin"]
 )
 
@@ -195,6 +195,51 @@ def get_request_detail(request_id):
         print("🔥 Error en /request/<id>:", e)
         return jsonify({"error": str(e)}), 500
 
+# ✅ Actualizar el estado de un request a "answered" (respondido)
+@app.route("/request/<request_id>/status", methods=["PATCH"])
+def update_request_status(request_id):
+    try:
+        # 1. Verificar el token de autenticación
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Missing authentication token"}), 401
+        
+        # Opcional: Decodificar el token si quieres verificar permisos (no necesario por ahora)
+        auth.verify_id_token(id_token) 
+
+        # 2. Referencia al documento
+        doc_ref = db.collection("request").document(request_id)
+        
+        # 3. Verificar si el documento existe
+        doc = doc_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Request not found"}), 404
+
+        # 4. Obtener el nuevo estado del cuerpo de la solicitud
+        data = request.get_json()
+        new_status = data.get("status")
+        
+        if not new_status or new_status not in ["answered", "pending", "rejected"]: # Puedes agregar más estados
+            return jsonify({"error": "Invalid or missing status in request body. Must be 'answered', 'pending', or 'rejected'."}), 400
+
+        # 5. Actualizar el campo 'status'
+        doc_ref.update({
+            "status": new_status,
+            "date_updated": firestore.SERVER_TIMESTAMP # Opcional: agregar una marca de tiempo de actualización
+        })
+
+        return jsonify({
+            "message": f"Request status updated successfully to '{new_status}'",
+            "request_id": request_id,
+            "new_status": new_status
+        }), 200
+
+    except firebase_admin.exceptions.FirebaseError as fe:
+        print(f"🔥 Firebase Error in /request/<id>/status: {fe}")
+        return jsonify({"error": f"Firebase error: {str(fe)}"}), 401
+    except Exception as e:
+        print(f"🔥 Error in /request/<id>/status: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ✅ Crear nueva solicitud (request)
