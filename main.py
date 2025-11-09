@@ -162,7 +162,10 @@ def add_remitter():
         print("🔥 Error en /remitters (POST):", e)
         return jsonify({"error": str(e)}), 400
 
-
+# ✅ Permitir preflight (CORS) para /remitters
+@app.route("/remitters", methods=["OPTIONS"])
+def remitters_options():
+    return '', 204
 
     # ✅ Crear nueva solicitud (request)
 @app.route("/request", methods=["POST"])
@@ -412,7 +415,9 @@ def get_requests_received():
         return jsonify({"error": str(e)}), 400
 
 # ✅ Permitir preflight para /request (CORS)
-
+@app.route("/request", methods=["OPTIONS"])
+def request_options():
+    return '', 204
 @app.route("/check-connection", methods=["GET"])
 def check_connection():
     try:
@@ -583,13 +588,6 @@ def logout():
     # Aquí puedes invalidar tokens si quieres forzar cierre desde el backend.
     return jsonify({"message": "Sesión cerrada correctamente (client-side)"}), 200
 
-@app.route("/remitters", methods=["OPTIONS"])
-def remitters_options():
-    return '', 204
-
-@app.route("/request", methods=["OPTIONS"])
-def request_options():
-    return '', 204
 
 @app.route("/requests", methods=["OPTIONS"])
 def requests_options():
