@@ -250,8 +250,15 @@ def create_request():
 # ✅ Endpoint para listar requests visibles al usuario logueado
 @app.route("/requests", methods=["GET", "OPTIONS"])
 def get_requests():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        return response, 200
+
     try:
-        # 🔐 Verificar token
+        # 🔐 Verificar token del usuario
         id_token = request.headers.get("Authorization")
         if not id_token:
             return jsonify({"error": "Falta token"}), 401
@@ -259,31 +266,33 @@ def get_requests():
         decoded_token = auth.verify_id_token(id_token)
         email_logged = decoded_token.get("email")
 
-        # 🔍 Parámetros de búsqueda
+        # 🔍 Parámetros de búsqueda y paginación
         searched_value = request.args.get("searched_value", "").lower()
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        # 🔎 Traer todas las solicitudes donde el usuario sea creador o asignado
-        requests_ref = db.collection("request")
-        docs_creator = requests_ref.where("creator_user", "==", email_logged).stream()
-        docs_assigned = requests_ref.where("user_asigned", "==", email_logged).stream()
+        # 🔎 Traer requests donde el usuario sea creador o asignado
+        collection_ref = db.collection("request")
+        query_creator = collection_ref.where("creator_user", "==", email_logged).get()
+        query_assigned = collection_ref.where("user_asigned", "==", email_logged).get()
 
-        all_docs = list(docs_creator) + list(docs_assigned)
+        all_requests = [doc.to_dict() for doc in query_creator] + [doc.to_dict() for doc in query_assigned]
 
-        # 🧩 Convertir a lista con ID incluido
-        results = []
-        for doc in all_docs:
-            data = doc.to_dict()
-            if searched_value in data.get("subject", "").lower():
-                results.append({
-                    "id": doc.id,  # 👈 incluimos el ID del documento
-                    **clean_firestore_data(data)
-                })
+        # 🧠 Filtrar por búsqueda (subject o correo)
+        if searched_value:
+            all_requests = [
+                r for r in all_requests
+                if searched_value in r.get("subject", "").lower()
+                or searched_value in r.get("creator_user", "").lower()
+                or searched_value in r.get("user_asigned", "").lower()
+            ]
 
-        # 🔢 Paginación
+        # 🗂️ Paginación
+        total = len(all_requests)
+        total_pages = (total + page_size - 1) // page_size
         start = (page - 1) * page_size
         end = start + page_size
+        paginated = all_requests[start:end]
         paginated_clean = [clean_firestore_data(r) for r in paginated]
 
         return jsonify({
@@ -299,119 +308,6 @@ def get_requests():
         return jsonify({"error": str(e)}), 400
 
 
-    except Exception as e:
-        print("🔥 Error en /requests:", e)
-        return jsonify({"error": str(e)}), 400
-
-@app.route("/requests-sent", methods=["GET", "OPTIONS"])
-def get_requests_sent():
-    if request.method == "OPTIONS":
-        response = jsonify({"message": "CORS preflight OK"})
-        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        return response, 200
-
-    try:
-        # 🔐 Token
-        id_token = request.headers.get("Authorization")
-        if not id_token:
-            return jsonify({"error": "Falta token"}), 401
-
-        decoded_token = auth.verify_id_token(id_token)
-        email_logged = decoded_token.get("email")
-
-        # 🔍 Filtros
-        searched_value = request.args.get("searched_value", "").lower()
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 10))
-
-        # 🔎 Consultar solo las solicitudes creadas por el usuario
-        query = db.collection("request").where("creator_user", "==", email_logged).get()
-        requests_sent = [doc.to_dict() for doc in query]
-
-        # 🔎 Búsqueda
-        if searched_value:
-            requests_sent = [
-                r for r in requests_sent
-                if searched_value in r.get("subject", "").lower()
-                or searched_value in r.get("user_asigned", "").lower()
-            ]
-
-        # 📄 Paginación
-        total = len(requests_sent)
-        total_pages = (total + page_size - 1) // page_size
-        start = (page - 1) * page_size
-        end = start + page_size
-        paginated = requests_sent[start:end]
-
-        return jsonify({
-            "response": {
-                "results": paginated,
-                "total_results": total,
-                "total_pages": total_pages
-            }
-        }), 200
-
-    except Exception as e:
-        print("🔥 Error en /requests-sent:", e)
-        return jsonify({"error": str(e)}), 400
-
-
-# ✅ Traer solicitudes RECIBIDAS (asignadas) al usuario (user_asigned == email)
-@app.route("/requests-received", methods=["GET", "OPTIONS"])
-def get_requests_received():
-    if request.method == "OPTIONS":
-        response = jsonify({"message": "CORS preflight OK"})
-        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        return response, 200
-
-    try:
-        # 🔐 Token
-        id_token = request.headers.get("Authorization")
-        if not id_token:
-            return jsonify({"error": "Falta token"}), 401
-
-        decoded_token = auth.verify_id_token(id_token)
-        email_logged = decoded_token.get("email")
-
-        # 🔍 Filtros
-        searched_value = request.args.get("searched_value", "").lower()
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 10))
-
-        # 🔎 Consultar solo las solicitudes asignadas al usuario
-        query = db.collection("request").where("user_asigned", "==", email_logged).get()
-        requests_received = [doc.to_dict() for doc in query]
-
-        # 🔎 Búsqueda
-        if searched_value:
-            requests_received = [
-                r for r in requests_received
-                if searched_value in r.get("subject", "").lower()
-                or searched_value in r.get("creator_user", "").lower()
-            ]
-
-        # 📄 Paginación
-        total = len(requests_received)
-        total_pages = (total + page_size - 1) // page_size
-        start = (page - 1) * page_size
-        end = start + page_size
-        paginated = requests_received[start:end]
-
-        return jsonify({
-            "response": {
-                "results": paginated,
-                "total_results": total,
-                "total_pages": total_pages
-            }
-        }), 200
-
-    except Exception as e:
-        print("🔥 Error en /requests-received:", e)
-        return jsonify({"error": str(e)}), 400
 
 # ✅ Permitir preflight para /request (CORS)
 @app.route("/request", methods=["OPTIONS"])
