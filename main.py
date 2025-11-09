@@ -79,9 +79,6 @@ def get_remitters():
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        id_token = request.headers.get("Authorization")
-        if not id_token:
-            return jsonify({"error": "Falta token de autenticación"}), 401
 
         decoded_token = auth.verify_id_token(id_token)
         uid = decoded_token["uid"]
@@ -398,9 +395,7 @@ def get_requests_sent():
             return '', 204
         # ------------------------------------
 
-        id_token = request.headers.get("Authorization")
-        if not id_token:
-            return jsonify({"error": "Falta token"}), 401
+
 
     try:
         id_token = request.headers.get("Authorization")
@@ -458,9 +453,7 @@ def get_requests_received():
             return '', 204
         # ------------------------------------
 
-        id_token = request.headers.get("Authorization")
-        if not id_token:
-            return jsonify({"error": "Falta token"}), 401
+
 
     try:
         id_token = request.headers.get("Authorization")
