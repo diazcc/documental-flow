@@ -154,6 +154,38 @@ def add_remitter():
 @app.route("/remitters", methods=["OPTIONS"])
 def remitters_options():
     return '', 204
+# ✅ Obtener la información completa de un request por su ID
+@router.get("/request/<request_id>")
+def get_request_detail(request_id):
+    try:
+        doc_ref = db.collection("requests").document(request_id)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return jsonify({"error": "El request no existe"}), 404
+
+        data = doc.to_dict()
+        data["id"] = doc.id  # ← incluimos el ID en la respuesta
+
+        # Si el request tiene documentos asociados, los devolvemos también
+        documents = data.get("documents", [])
+        status = data.get("status", "pending")  # valor por defecto
+
+        return jsonify({
+            "message": "Request obtenido correctamente",
+            "data": {
+                "id": data["id"],
+                "creator_user": data.get("creator_user"),
+                "user_asigned": data.get("user_asigned"),
+                "subject": data.get("subject"),
+                "date_created": data.get("date_created"),
+                "status": status,
+                "documents": documents
+            }
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ✅ Crear nueva solicitud (request)
@@ -184,7 +216,7 @@ def create_request():
                 "name": file.filename,
                 "url": upload_result.get("secure_url"),
                 "observation": "",
-                "status": "uploaded",
+                "status": "pending",
                 "subject": subject
             })
 
@@ -199,14 +231,15 @@ def create_request():
             }
             db.collection("users").add(new_remitter)
 
-        doc_data = {
-            "creator_user": email_logged,
-            "creator_uid": uid,
-            "date_created": firestore.SERVER_TIMESTAMP,
-            "user_asigned": user_asigned,
-            "subject": subject,
-            "documents": documents
-        }
+            doc_data = {
+                        "creator_user": email_logged.lower(),
+                        "creator_uid": uid,
+                        "date_created": firestore.SERVER_TIMESTAMP,
+                        "user_asigned": user_asigned.lower(),
+                        "subject": subject,
+                        "documents": documents,
+                        "status": "pending"  # ← 🔥 estado inicial agregado
+            }
 
         db.collection("request").add(doc_data)
 
