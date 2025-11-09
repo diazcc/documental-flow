@@ -151,18 +151,18 @@ def add_remitter():
         return jsonify({"error": str(e)}), 400
 
 
-@app.route("/remitters", methods=["OPTIONS"])
+""" @app.route("/remitters", methods=["OPTIONS"])
 def remitters_options():
-    return '', 204
+    return '', 204 """
     
 @app.route("/request/<request_id>", methods=["GET", "OPTIONS"])
 def get_request_detail(request_id):
-    if request.method == "OPTIONS":
+    """ if request.method == "OPTIONS":
         response = jsonify({"message": "CORS preflight OK"})
         response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
         response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        return response, 200
+        return response, 200 """
 
     try:
         id_token = request.headers.get("Authorization")
@@ -320,12 +320,12 @@ def request_options():
 
 @app.route("/requests", methods=["GET", "OPTIONS"])
 def get_requests():
-    if request.method == "OPTIONS":
+    """ if request.method == "OPTIONS":
         response = jsonify({"message": "CORS preflight OK"})
         response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
         response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        return response, 200
+        return response, 200 """
 
     try:
         id_token = request.headers.get("Authorization")
@@ -389,12 +389,12 @@ def get_requests():
 
 @app.route("/requests-sent", methods=["GET", "OPTIONS"])
 def get_requests_sent():
-    if request.method == "OPTIONS":
+    """ if request.method == "OPTIONS":
         response = jsonify({"message": "CORS preflight OK"})
         response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
         response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        return response, 200
+        return response, 200 """
 
     try:
         id_token = request.headers.get("Authorization")
@@ -446,12 +446,12 @@ def get_requests_sent():
 
 @app.route("/requests-received", methods=["GET", "OPTIONS"])
 def get_requests_received():
-    if request.method == "OPTIONS":
+    """ if request.method == "OPTIONS":
         response = jsonify({"message": "CORS preflight OK"})
         response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
         response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        return response, 200
+        return response, 200 """
 
     try:
         id_token = request.headers.get("Authorization")
