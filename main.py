@@ -298,20 +298,29 @@ def get_requests():
         query_creator = collection_ref.where("creator_user", "==", email_logged).get()
         query_assigned = collection_ref.where("user_asigned", "==", email_logged).get()
 
-        # 👇 Aquí incluimos el id del documento
         all_requests = [
-            {"id": doc.id, **doc.to_dict()} for doc in query_creator
+            {
+                "id": doc.id,
+                **doc.to_dict(),
+                "status": doc.to_dict().get("status", "pending")
+            }
+            for doc in query_creator
         ] + [
-            {"id": doc.id, **doc.to_dict()} for doc in query_assigned
+            {
+                "id": doc.id,
+                **doc.to_dict(),
+                "status": doc.to_dict().get("status", "pending")
+            }
+            for doc in query_assigned
         ]
 
-        # 🔍 Filtrado
+        # 🔍 Filtro
         if searched_value:
             all_requests = [
                 r for r in all_requests
-                if searched_value in r.get("subject", "").lower() or
-                   searched_value in r.get("creator_user", "").lower() or
-                   searched_value in r.get("user_asigned", "").lower()
+                if searched_value in r.get("subject", "").lower()
+                or searched_value in r.get("creator_user", "").lower()
+                or searched_value in r.get("user_asigned", "").lower()
             ]
 
         # 📄 Paginación
@@ -332,6 +341,7 @@ def get_requests():
     except Exception as e:
         print("🔥 Error en /requests:", e)
         return jsonify({"error": str(e)}), 400
+
 @app.route("/requests-sent", methods=["GET", "OPTIONS"])
 def get_requests_sent():
     if request.method == "OPTIONS":
@@ -353,19 +363,23 @@ def get_requests_sent():
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        # ✅ Solo solicitudes creadas por el usuario
         query_creator = db.collection("request").where("creator_user", "==", email_logged).get()
-        requests_sent = [{"id": doc.id, **doc.to_dict()} for doc in query_creator]
+        requests_sent = [
+            {
+                "id": doc.id,
+                **doc.to_dict(),
+                "status": doc.to_dict().get("status", "pending")
+            }
+            for doc in query_creator
+        ]
 
-        # 🔍 Búsqueda
         if searched_value:
             requests_sent = [
                 r for r in requests_sent
-                if searched_value in r.get("subject", "").lower() or
-                   searched_value in r.get("user_asigned", "").lower()
+                if searched_value in r.get("subject", "").lower()
+                or searched_value in r.get("user_asigned", "").lower()
             ]
 
-        # 📄 Paginación
         total = len(requests_sent)
         total_pages = (total + page_size - 1) // page_size
         start = (page - 1) * page_size
@@ -399,6 +413,7 @@ def get_requests_received():
         if not id_token:
             return jsonify({"error": "Falta token"}), 401
 
+        # ✅ Decodificar token y obtener el correo
         decoded_token = auth.verify_id_token(id_token)
         email_logged = decoded_token.get("email")
 
@@ -406,7 +421,7 @@ def get_requests_received():
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 10))
 
-        # ✅ Solo solicitudes recibidas (asignadas al usuario)
+        # ✅ Solo solicitudes asignadas al usuario logueado
         query_assigned = db.collection("request").where("user_asigned", "==", email_logged).get()
         requests_received = [{"id": doc.id, **doc.to_dict()} for doc in query_assigned]
 
@@ -414,8 +429,8 @@ def get_requests_received():
         if searched_value:
             requests_received = [
                 r for r in requests_received
-                if searched_value in r.get("subject", "").lower() or
-                   searched_value in r.get("creator_user", "").lower()
+                if searched_value in r.get("subject", "").lower()
+                or searched_value in r.get("creator_user", "").lower()
             ]
 
         # 📄 Paginación
@@ -424,11 +439,18 @@ def get_requests_received():
         start = (page - 1) * page_size
         end = start + page_size
         paginated = requests_received[start:end]
-        paginated_clean = [clean_firestore_data(r) for r in paginated]
+
+        # ✅ Agregar el estado correspondiente de la colección "status"
+        enriched_requests = []
+        for r in paginated:
+            status_ref = db.collection("status").where("id_request", "==", r["id"]).get()
+            status_data = status_ref[0].to_dict() if status_ref else {"status": "unknown"}
+            r["status"] = status_data.get("status")
+            enriched_requests.append(clean_firestore_data(r))
 
         return jsonify({
             "response": {
-                "results": paginated_clean,
+                "results": enriched_requests,
                 "total_results": total,
                 "total_pages": total_pages
             }
