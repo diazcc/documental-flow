@@ -588,10 +588,6 @@ def logout():
     # Aquí puedes invalidar tokens si quieres forzar cierre desde el backend.
     return jsonify({"message": "Sesión cerrada correctamente (client-side)"}), 200
 
-@app.route("/remitters", methods=["OPTIONS"])
-def remitters_options():
-    return '', 204
-
 
 @app.route("/requests", methods=["OPTIONS"])
 def requests_options():
