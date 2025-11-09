@@ -160,36 +160,42 @@ def add_remitter():
 
 
     
-@app.route("/request/<request_id>", methods=["GET", "OPTIONS"])
+@app.route("/request/<request_id>", methods=["GET", "OPTIONS"]) # 👈 CORRECCIÓN AQUÍ
 def get_request_detail(request_id):
-    
+  
+    # 🌟 AÑADIR EL MANEJO DE OPTIONS 🌟
+    # La petición OPTIONS (preflight CORS) no lleva token. Si no la saltamos, devuelve 401 y el navegador bloquea la siguiente GET.
+    if request.method == "OPTIONS":
+        return '', 204
+    # ------------------------------------
 
     try:
         id_token = request.headers.get("Authorization")
         if not id_token:
-            return jsonify({"error": "Falta token de autenticación"}), 401
-
+        return jsonify({"error": "Falta token de autenticación"}), 401
+            
+            # El resto del código se mantiene igual
         decoded_token = auth.verify_id_token(id_token)
 
         doc_ref = db.collection("request").document(request_id)
         doc = doc_ref.get()
 
         if not doc.exists:
-            return jsonify({"error": "El request no existe"}), 404
+        return jsonify({"error": "El request no existe"}), 404
 
         data = doc.to_dict()
         data["id"] = doc.id
 
         return jsonify({
-            "response": {
-                "id": data["id"],
-                "creator_user": data.get("creator_user"),
-                "user_asigned": data.get("user_asigned"),
-                "subject": data.get("subject"),
-                "date_created": data.get("date_created"),
-                "status": data.get("status", "pending"),
-                "documents": data.get("documents", [])
-            }
+        "response": {
+            "id": data["id"],
+            "creator_user": data.get("creator_user"),
+            "user_asigned": data.get("user_asigned"),
+            "subject": data.get("subject"),
+            "date_created": data.get("date_created"),
+            "status": data.get("status", "pending"),
+            "documents": data.get("documents", [])
+        }
         }), 200
     except Exception as e:
         print("🔥 Error en /request/<id>:", e)
