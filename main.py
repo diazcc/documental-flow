@@ -412,9 +412,7 @@ def get_requests_received():
         return jsonify({"error": str(e)}), 400
 
 # ✅ Permitir preflight para /request (CORS)
-@app.route("/request", methods=["OPTIONS"])
-def request_options():
-    return '', 204
+
 @app.route("/check-connection", methods=["GET"])
 def check_connection():
     try:
