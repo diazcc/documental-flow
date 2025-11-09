@@ -330,9 +330,10 @@ def get_requests():
         return '', 204
         # ------------------------------------
 
-        id_token = request.headers.get("Authorization")
-        if not id_token:
-            return jsonify({"error": "Falta token"}), 401
+    id_token = request.headers.get("Authorization")
+    if not id_token:
+        return jsonify({"error": "Falta token"}), 401
+        
     try:
         
         decoded_token = auth.verify_id_token(id_token)
