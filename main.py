@@ -65,6 +65,15 @@ def clean_firestore_data(data):
 # ✅ Obtener remitentes (remitters)
 @app.route("/remitters", methods=["GET"])
 def get_remitters():
+    # 🌟 ESTO ES LO QUE DEBES AÑADIR 🌟
+    # La petición OPTIONS no lleva token. Si no la saltamos, devuelve 401 y el navegador bloquea la siguiente GET.
+    if request.method == "OPTIONS":
+        return '', 204
+    # ------------------------------------
+
+    id_token = request.headers.get("Authorization")
+    if not id_token:
+        return jsonify({"error": "Falta token"}), 401
     try:
         searched_value = request.args.get("searched_value", "").lower()
         page = int(request.args.get("page", 1))
@@ -111,6 +120,7 @@ def get_remitters():
 
 @app.route("/remitters", methods=["POST"])
 def add_remitter():
+    
     try:
         id_token = request.headers.get("Authorization")
         if not id_token:
@@ -311,7 +321,15 @@ def create_request():
 @app.route("/requests", methods=["GET", "OPTIONS"])
 def get_requests():
     
+# 🌟 ESTO ES LO QUE DEBES AÑADIR 🌟
+        # La petición OPTIONS no lleva token. Si no la saltamos, devuelve 401 y el navegador bloquea la siguiente GET.
+        if request.method == "OPTIONS":
+            return '', 204
+        # ------------------------------------
 
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
     try:
         id_token = request.headers.get("Authorization")
         if not id_token:
@@ -374,7 +392,15 @@ def get_requests():
 
 @app.route("/requests-sent", methods=["GET", "OPTIONS"])
 def get_requests_sent():
-    
+    # 🌟 ESTO ES LO QUE DEBES AÑADIR 🌟
+        # La petición OPTIONS no lleva token. Si no la saltamos, devuelve 401 y el navegador bloquea la siguiente GET.
+        if request.method == "OPTIONS":
+            return '', 204
+        # ------------------------------------
+
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
 
     try:
         id_token = request.headers.get("Authorization")
@@ -426,7 +452,15 @@ def get_requests_sent():
 
 @app.route("/requests-received", methods=["GET", "OPTIONS"])
 def get_requests_received():
-    
+    # 🌟 ESTO ES LO QUE DEBES AÑADIR 🌟
+        # La petición OPTIONS no lleva token. Si no la saltamos, devuelve 401 y el navegador bloquea la siguiente GET.
+        if request.method == "OPTIONS":
+            return '', 204
+        # ------------------------------------
+
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token"}), 401
 
     try:
         id_token = request.headers.get("Authorization")
