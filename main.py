@@ -154,38 +154,47 @@ def add_remitter():
 @app.route("/remitters", methods=["OPTIONS"])
 def remitters_options():
     return '', 204
-# ✅ Obtener la información completa de un request por su ID
-@router.get("/request/<request_id>")
+    
+@app.route("/request/<request_id>", methods=["GET", "OPTIONS"])
 def get_request_detail(request_id):
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        return response, 200
+
     try:
-        doc_ref = db.collection("requests").document(request_id)
+        id_token = request.headers.get("Authorization")
+        if not id_token:
+            return jsonify({"error": "Falta token de autenticación"}), 401
+
+        decoded_token = auth.verify_id_token(id_token)
+
+        doc_ref = db.collection("request").document(request_id)
         doc = doc_ref.get()
 
         if not doc.exists:
             return jsonify({"error": "El request no existe"}), 404
 
         data = doc.to_dict()
-        data["id"] = doc.id  # ← incluimos el ID en la respuesta
-
-        # Si el request tiene documentos asociados, los devolvemos también
-        documents = data.get("documents", [])
-        status = data.get("status", "pending")  # valor por defecto
+        data["id"] = doc.id
 
         return jsonify({
-            "message": "Request obtenido correctamente",
-            "data": {
+            "response": {
                 "id": data["id"],
                 "creator_user": data.get("creator_user"),
                 "user_asigned": data.get("user_asigned"),
                 "subject": data.get("subject"),
                 "date_created": data.get("date_created"),
-                "status": status,
-                "documents": documents
+                "status": data.get("status", "pending"),
+                "documents": data.get("documents", [])
             }
-        })
-
+        }), 200
     except Exception as e:
+        print("🔥 Error en /request/<id>:", e)
         return jsonify({"error": str(e)}), 500
+
 
 
 # ✅ Crear nueva solicitud (request)
